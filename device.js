@@ -1,89 +1,121 @@
-// Copyright (c) Microsoft. All rights reserved.
-// Licensed under the MIT license. See LICENSE file in the project root for full license information.
 
-'use strict';
-
+// Setup for all libraries
+const path = require('path');
 const axios = require('axios');
+const admin = require('firebase-admin');
+const uuid = require('uuid-v4');
+const Mqtt = require('azure-iot-device-mqtt').Mqtt;
+const DeviceClient = require('azure-iot-device').Client;
+const Message = require('azure-iot-device').Message;
 
+const { storage } = require('firebase-admin');
 
+// firebase service account
+const serviceAccount = require('./goodbadfruit-firebase-adminsdk-61lvl-437de99142.json');
 
+// iot hub connection string
+const connectionString = 'HostName=FruitHub.azure-devices.net;DeviceId=MyNodeDevice;SharedAccessKey=ZIj/h8x4qjOgwT87zvYTz528usDT7OeiN8o4IGKbT9s=';
 
+// iot hub client
+const client = DeviceClient.fromConnectionString(connectionString, Mqtt);
 
-
-
-
-var data = JSON.stringify({
-    "Url": "https://www.telegraph.co.uk/multimedia/archive/01834/orange_1834038b.jpg"
+// init firebase admin
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+  storageBucket: 'goodbadfruit.appspot.com'
 });
 
-var config = {
-    method: 'post',
-    url: 'https://fruitvision.cognitiveservices.azure.com/customvision/v3.0/Prediction/a16bd1d4-1eec-495e-82d6-0edbf005757d/classify/iterations/Iteration1/url',
-    headers: { 
-        'Prediction-Key': 'ff56c613f1ae48bba40bc89bbfb3fc9a', 
-        'Content-Type': 'application/json'
-    },
-    data : data
-};
+// get storage bucket
+const bucket = admin.storage().bucket();
 
-axios(config)
-.then(function (response) {
-    console.log(response.data);
-})
-.catch(function (error) {
-    console.log(error);
-});
+/**
+ * Method to upload a photo to gcp, and use send the url of that photo to be processed in Azure
+ * @param filePath the local path to the image
+ */
+async function uploadPhoto(filePath) {
+    const photoId = uuid();
 
+    const metadata = {
+        metadata: {
+            firebaseStorageDownloadTokens: photoId
+        },
+        contentType: 'image/png',
+        cacheControl: 'public, max-age=31536000',
+    };
 
+    const fileDest = `captures/${photoId}.jpg`;
 
+    bucket.upload(filePath, {
+        gzip: true,
+        destination: fileDest,
+        metadata: metadata
+    }).then((data)=> {        
+        const url = "https://firebasestorage.googleapis.com/v0/b/" + bucket.name + "/o/" + encodeURIComponent(fileDest) + "?alt=media&token=" + photoId;        
+        analyze(url);
+    });
+}
 
+/**
+ * Method to send photo to Azure to be analyzed
+ * @param url url of the photo
+ */
+async function analyze(url) {
+    console.log(`analyzing ${url}`);
 
+    var data = JSON.stringify({
+        "Url": url
+    });
+    
+    var config = {
+        method: 'post',
+        url: 'https://fruitvision.cognitiveservices.azure.com/customvision/v3.0/Prediction/a16bd1d4-1eec-495e-82d6-0edbf005757d/classify/iterations/Iteration1/url',
+        headers: { 
+            'Prediction-Key': 'ff56c613f1ae48bba40bc89bbfb3fc9a', 
+            'Content-Type': 'application/json'
+        },
+        data : data
+    };
+    
+    axios(config)
+    .then(function (response) {
+        console.log(response.data);
+    })
+    .catch(function (error) {
+        console.log(error);
+    });   
+}
 
-
-
-// The device connection string to authenticate the device with your IoT hub.
-//
-// NOTE:
-// For simplicity, this sample sets the connection string in code.
-// In a production environment, the recommended approach is to use
-// an environment variable to make it available to your application
-// or use an HSM or an x509 certificate.
-// https://docs.microsoft.com/azure/iot-hub/iot-hub-devguide-security
-//
-// Using the Azure CLI:
-// az iot hub device-identity show-connection-string --hub-name {YourIoTHubName} --device-id MyNodeDevice --output table
-var connectionString = 'HostName=FruitHub.azure-devices.net;DeviceId=MyNodeDevice;SharedAccessKey=ZIj/h8x4qjOgwT87zvYTz528usDT7OeiN8o4IGKbT9s=';
-
-// Using the Node.js Device SDK for IoT Hub:
-//   https://github.com/Azure/azure-iot-sdk-node
-// The sample connects to a device-specific MQTT endpoint on your IoT Hub.
-var Mqtt = require('azure-iot-device-mqtt').Mqtt;
-var DeviceClient = require('azure-iot-device').Client
-var Message = require('azure-iot-device').Message;
-
-var client = DeviceClient.fromConnectionString(connectionString, Mqtt);
-
-// Create a message and send it to the IoT hub every second
-setInterval(function(){
+/**
+ * Function to send message through Azure IOT Hub
+ * @param data 
+ */
+function sendIOTMessage(data) {
   // Simulate telemetry.
-  var temperature = 20 + (Math.random() * 15);
-  var message = new Message(JSON.stringify({
-    temperature: temperature,
-    humidity: 60 + (Math.random() * 20)
-  }));
+  const message = new Message(JSON.stringify(data));
 
   // Add a custom application property to the message.
   // An IoT hub can filter on these properties without access to the message body.
-  message.properties.add('temperatureAlert', (temperature > 30) ? 'true' : 'false');
-
-  console.log('Sending message: ' + message.getData());
+  message.properties.add('temperatureAlert', (data.temperature > 30) ? 'true' : 'false');
 
   // Send the message.
   client.sendEvent(message, function (err) {
     if (err) {
       console.error('send error: ' + err.toString());
     } else {
-      console.log('message sent');
+      console.log('message sent: ' + message.getData());
     }
   });
-}, 1000);
+}
+
+// Create a message and send it to the IoT hub every second
+setInterval(function(){
+    const data = {
+        temperature: 20 + (Math.random() * 15),
+        humidity: 60 + (Math.random() * 20)
+    };
+
+    sendIOTMessage(data);
+}, 2000);
+
+// TODO: remove this (its just for testing uploading an image)
+uploadPhoto("./capture/help.jpg");
