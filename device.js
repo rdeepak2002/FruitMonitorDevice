@@ -11,6 +11,52 @@ const NodeWebcam = require( "node-webcam" );
 
 const { storage } = require('firebase-admin');
 
+const fs = require('fs');
+
+const socketIOClient = require('socket.io-client');
+const ENDPOINT = "http://localhost:5000";
+
+// create webcam
+const opts = {
+    width: 1280,
+    height: 720,
+    quality: 100,
+    frames: 60,
+    delay: 0,
+    saveShots: true,
+    output: "jpeg",
+    device: false,
+    callbackReturn: "location",
+    verbose: false
+};
+
+const Webcam = NodeWebcam.create( opts );
+
+// get device info file (or create it if dne)
+let deviceInfo = undefined;
+
+try {
+    deviceInfo = require('./device.json');
+
+    init();
+}
+catch(error) {
+    console.log("Generating device config...")
+
+    json = {
+        id: uuid(),
+        status: "pairing",
+        ownerId: undefined
+    };
+
+    fs.writeFile('device.json', JSON.stringify(json), 'utf8', ()=>{
+        console.log("Device config generated!")
+        deviceInfo = require('./device.json');
+
+        init();
+    });
+}
+
 // firebase service account
 const serviceAccount = require('./goodbadfruit-firebase-adminsdk-61lvl-437de99142.json');
 
@@ -35,6 +81,7 @@ const bucket = admin.storage().bucket();
  */
 async function uploadPhoto(filePath) {
     const photoId = uuid();
+    // const photoId = deviceInfo.id;
 
     const metadata = {
         metadata: {
@@ -46,6 +93,10 @@ async function uploadPhoto(filePath) {
 
     const fileDest = `captures/${photoId}.jpg`;
 
+    bucket.delete(fileDest, {
+
+    })
+
     bucket.upload(filePath, {
         gzip: true,
         destination: fileDest,
@@ -53,6 +104,8 @@ async function uploadPhoto(filePath) {
     }).then((data)=> {        
         const url = "https://firebasestorage.googleapis.com/v0/b/" + bucket.name + "/o/" + encodeURIComponent(fileDest) + "?alt=media&token=" + photoId;        
         analyze(url);
+    }).catch(err => {
+        console.error("Upload error", err);
     });
 }
 
@@ -94,10 +147,6 @@ function sendIOTMessage(data) {
   // Simulate telemetry.
   const message = new Message(JSON.stringify(data));
 
-  // Add a custom application property to the message.
-  // An IoT hub can filter on these properties without access to the message body.
-//   message.properties.add('temperatureAlert', (data.temperature > 30) ? 'true' : 'false');
-
   // Send the message.
   client.sendEvent(message, function (err) {
     if (err) {
@@ -106,6 +155,9 @@ function sendIOTMessage(data) {
       console.log('message sent: ' + message.getData());
     }
     console.log();
+
+    // call take photo again
+    // takePhoto();
   });
 }
 
@@ -113,29 +165,45 @@ function sendIOTMessage(data) {
  * Function to take a photo from webcam
  */
 function takePhoto() {
-    // create webcam
-    const opts = {
-        width: 1280,
-        height: 720,
-        quality: 100,
-        frames: 60,
-        delay: 0,
-        saveShots: true,
-        output: "jpeg",
-        device: false,
-        callbackReturn: "location",
-        verbose: false
-    };
-
-    const Webcam = NodeWebcam.create( opts );
-
     // Call Azure image recognition
     Webcam.capture("webcam", function( err, data ) {
         uploadPhoto('./webcam.jpg');
     });
 }
 
-// Take photo every 10 seconds
-setInterval(function(){
-    takePhoto();
-}, 5000);
+/**
+ * Function called on startup
+ */
+function init() {
+    console.log(deviceInfo);
+
+    const socket = socketIOClient(ENDPOINT);
+
+    socket.on('connect', function (socket) {
+        console.log('connected to server!');
+    });
+
+    socket.on("pairRequest", data => {
+        if(data.deviceId === deviceInfo.id) {
+            deviceInfo.status = "paired";
+            deviceInfo.owner = data.owner;
+        
+            fs.writeFile('device.json', JSON.stringify(deviceInfo), 'utf8', ()=>{
+                console.log("device paired!")
+                deviceInfo = require('./device.json');
+
+                socket.emit("devicePaired", deviceInfo);
+            });
+        }
+    });
+
+    // implementation to take photo every x seconds
+    setInterval(function(){
+        if(deviceInfo.status !== "paired") {
+            console.log("needs to be paired...")
+        }
+        else {
+            takePhoto();
+        }
+    }, 5000);
+}
