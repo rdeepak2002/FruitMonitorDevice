@@ -4,9 +4,12 @@ const path = require('path');
 const axios = require('axios');
 const admin = require('firebase-admin');
 const uuid = require('uuid-v4');
+
 const Mqtt = require('azure-iot-device-mqtt').Mqtt;
 const DeviceClient = require('azure-iot-device').Client;
 const Message = require('azure-iot-device').Message;
+
+const NodeWebcam = require( "node-webcam" );
 
 const { storage } = require('firebase-admin');
 
@@ -60,8 +63,6 @@ async function uploadPhoto(filePath) {
  * @param url url of the photo
  */
 async function analyze(url) {
-    console.log(`analyzing ${url}`);
-
     var data = JSON.stringify({
         "Url": url
     });
@@ -78,7 +79,9 @@ async function analyze(url) {
     
     axios(config)
     .then(function (response) {
-        console.log(response.data);
+        dataToSend = response.data;
+        dataToSend.imageUrl = url;
+        sendIOTMessage(dataToSend);
     })
     .catch(function (error) {
         console.log(error);
@@ -107,15 +110,33 @@ function sendIOTMessage(data) {
   });
 }
 
-// Create a message and send it to the IoT hub every second
-setInterval(function(){
-    const data = {
-        temperature: 20 + (Math.random() * 15),
-        humidity: 60 + (Math.random() * 20)
+/**
+ * Function to take a photo from webcam
+ */
+function takePhoto() {
+    // create webcam
+    const opts = {
+        width: 1280,
+        height: 720,
+        quality: 100,
+        frames: 60,
+        delay: 0,
+        saveShots: true,
+        output: "jpeg",
+        device: false,
+        callbackReturn: "location",
+        verbose: false
     };
 
-    sendIOTMessage(data);
-}, 2000);
+    const Webcam = NodeWebcam.create( opts );
 
-// TODO: remove this (its just for testing uploading an image)
-uploadPhoto("./capture/help.jpg");
+    // Call Azure image recognition
+    Webcam.capture("webcam", function( err, data ) {
+        uploadPhoto('./webcam.jpg');
+    });
+}
+
+// Take photo every 10 seconds
+setInterval(function(){
+    takePhoto();
+}, 5000);

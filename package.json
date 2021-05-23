@@ -24,6 +24,7 @@
     "azure-iot-device-mqtt": "^1.7.1",
     "firebase": "^8.6.2",
     "firebase-admin": "^9.8.0",
+    "node-webcam": "^0.8.0",
     "path": "^0.12.7",
     "uuid-v4": "^0.1.0"
   }
