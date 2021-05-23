@@ -1,6 +1,4 @@
-
 // Setup for all libraries
-const path = require('path');
 const axios = require('axios');
 const admin = require('firebase-admin');
 const uuid = require('uuid-v4');
@@ -107,6 +105,7 @@ function sendIOTMessage(data) {
     } else {
       console.log('message sent: ' + message.getData());
     }
+    console.log();
   });
 }
 
