@@ -46,7 +46,8 @@ catch(error) {
     json = {
         id: uuid(),
         status: "pairing",
-        ownerId: undefined
+        ownerId: undefined,
+        name: "Fruit Monitor"
     };
 
     fs.writeFile('device.json', JSON.stringify(json), 'utf8', ()=>{
@@ -127,9 +128,10 @@ async function analyze(url) {
     axios(config)
     .then(function (response) {
         dataToSend = response.data;
-        dataToSend.imageUrl = url;
-        dataToSend.owner = deviceInfo.owner;
-        dataToSend.deviceId = deviceInfo.id;
+        dataToSend.deviceInfo = deviceInfo;
+        // dataToSend.imageUrl = url;
+        // dataToSend.owner = deviceInfo.owner;
+        // dataToSend.deviceId = deviceInfo.id;
         sendIOTMessage(dataToSend);
     })
     .catch(function (error) {
@@ -185,6 +187,7 @@ function init() {
         if(data.deviceId === deviceInfo.id) {
             deviceInfo.status = "paired";
             deviceInfo.owner = data.owner;
+            deviceInfo.name = "Fruit Monitor";
         
             fs.writeFile('device.json', JSON.stringify(deviceInfo), 'utf8', ()=>{
                 console.log("device paired!")
