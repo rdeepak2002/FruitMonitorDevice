@@ -96,7 +96,7 @@ function sendIOTMessage(data) {
 
   // Add a custom application property to the message.
   // An IoT hub can filter on these properties without access to the message body.
-  message.properties.add('temperatureAlert', (data.temperature > 30) ? 'true' : 'false');
+//   message.properties.add('temperatureAlert', (data.temperature > 30) ? 'true' : 'false');
 
   // Send the message.
   client.sendEvent(message, function (err) {
