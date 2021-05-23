@@ -129,9 +129,7 @@ async function analyze(url) {
     .then(function (response) {
         dataToSend = response.data;
         dataToSend.deviceInfo = deviceInfo;
-        // dataToSend.imageUrl = url;
-        // dataToSend.owner = deviceInfo.owner;
-        // dataToSend.deviceId = deviceInfo.id;
+        dataToSend.imageUrl = url;
         sendIOTMessage(dataToSend);
     })
     .catch(function (error) {
