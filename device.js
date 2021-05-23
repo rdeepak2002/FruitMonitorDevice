@@ -93,10 +93,6 @@ async function uploadPhoto(filePath) {
 
     const fileDest = `captures/${photoId}.jpg`;
 
-    bucket.delete(fileDest, {
-
-    })
-
     bucket.upload(filePath, {
         gzip: true,
         destination: fileDest,
