@@ -3,6 +3,44 @@
 
 'use strict';
 
+const axios = require('axios');
+
+
+
+
+
+
+
+
+var data = JSON.stringify({
+    "Url": "https://www.telegraph.co.uk/multimedia/archive/01834/orange_1834038b.jpg"
+});
+
+var config = {
+    method: 'post',
+    url: 'https://fruitvision.cognitiveservices.azure.com/customvision/v3.0/Prediction/a16bd1d4-1eec-495e-82d6-0edbf005757d/classify/iterations/Iteration1/url',
+    headers: { 
+        'Prediction-Key': 'ff56c613f1ae48bba40bc89bbfb3fc9a', 
+        'Content-Type': 'application/json'
+    },
+    data : data
+};
+
+axios(config)
+.then(function (response) {
+    console.log(response.data);
+})
+.catch(function (error) {
+    console.log(error);
+});
+
+
+
+
+
+
+
+
 // The device connection string to authenticate the device with your IoT hub.
 //
 // NOTE:
