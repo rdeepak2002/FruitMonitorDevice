@@ -70,7 +70,7 @@ const client = DeviceClient.fromConnectionString(connectionString, Mqtt);
 // init firebase admin
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount),
-  storageBucket: 'goodbadfruit.appspot.com'
+  storageBucket: 'goodbadfruit-792f6.appspot.com'
 });
 
 // get storage bucket
