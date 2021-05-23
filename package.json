@@ -4,6 +4,7 @@
   "description": "Simulated device application in the IoT Hub quickstart device-to-cloud sample",
   "main": "SimulatedDevice.js",
   "scripts": {
+    "start": "node device.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
