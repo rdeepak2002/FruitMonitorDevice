@@ -18,9 +18,9 @@ const ENDPOINT = "http://localhost:5000";
 
 // create webcam
 const opts = {
-    width: 1280,
-    height: 720,
-    quality: 100,
+    width: 500,
+    height: 300,
+    quality: 50,
     frames: 60,
     delay: 0,
     saveShots: true,
@@ -59,7 +59,8 @@ catch(error) {
 }
 
 // iot hub connection string
-const connectionString = 'HostName=FruitHub.azure-devices.net;DeviceId=MyNodeDevice;SharedAccessKey=ZIj/h8x4qjOgwT87zvYTz528usDT7OeiN8o4IGKbT9s=';
+// const connectionString = 'HostName=FruitHub.azure-devices.net;DeviceId=MyNodeDevice;SharedAccessKey=ZIj/h8x4qjOgwT87zvYTz528usDT7OeiN8o4IGKbT9s=';
+const connectionString = 'HostName=FruitVision2.azure-devices.net;DeviceId=MyNodeDevice;SharedAccessKey=V+OufF7sOXhhx1jwT2M3cHeDAhIfay7E/sj10TeeavY=';
 
 // iot hub client
 const client = DeviceClient.fromConnectionString(connectionString, Mqtt);
@@ -89,6 +90,7 @@ async function analyze(url) {
         dataToSend = response.data;
         dataToSend.deviceInfo = deviceInfo;
         dataToSend.imageUrl = base64_encode(url);
+        // dataToSend.imageUrl = "Yo";
         sendIOTMessage(dataToSend);
     })
     .catch(function (error) {
@@ -121,9 +123,8 @@ function sendIOTMessage(data) {
     if (err) {
       console.error('send error: ' + err.toString());
     } else {
-      console.log('message sent: ' + message.getData());
+        console.log("message sent");
     }
-    console.log();
 
     // call take photo again
     // takePhoto();
