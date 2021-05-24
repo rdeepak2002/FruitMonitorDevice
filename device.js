@@ -9,9 +9,9 @@ const Message = require('azure-iot-device').Message;
 
 const NodeWebcam = require( "node-webcam" );
 
-const { storage } = require('firebase-admin');
-
 const fs = require('fs');
+
+var FormData = require('form-data');
 
 const socketIOClient = require('socket.io-client');
 const ENDPOINT = "http://localhost:5000";
@@ -58,100 +58,54 @@ catch(error) {
     });
 }
 
-// firebase service account
-const serviceAccount = require('./goodbadfruit-firebase-adminsdk-61lvl-437de99142.json');
-
 // iot hub connection string
 const connectionString = 'HostName=FruitHub.azure-devices.net;DeviceId=MyNodeDevice;SharedAccessKey=ZIj/h8x4qjOgwT87zvYTz528usDT7OeiN8o4IGKbT9s=';
 
 // iot hub client
 const client = DeviceClient.fromConnectionString(connectionString, Mqtt);
 
-// init firebase admin
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-  storageBucket: 'goodbadfruit-792f6.appspot.com'
-});
-
-// get storage bucket
-const bucket = admin.storage().bucket();
-
-/**
- * Method to upload a photo to gcp, and use send the url of that photo to be processed in Azure
- * @param filePath the local path to the image
- */
-async function uploadPhoto(filePath) {
-    // const photoId = uuid();
-    const photoId = deviceInfo.id;
-
-    const metadata = {
-        metadata: {
-            firebaseStorageDownloadTokens: photoId
-        },
-        contentType: 'image/png',
-        cacheControl: 'public, max-age=31536000',
-    };
-
-    const fileDest = `captures/${photoId}.jpg`;
-
-    bucket.file(fileDest).delete()
-    .then(()=>{
-        bucket.upload(filePath, {
-            gzip: true,
-            destination: fileDest,
-            metadata: metadata
-        }).then((data)=> {        
-            const url = "https://firebasestorage.googleapis.com/v0/b/" + bucket.name + "/o/" + encodeURIComponent(fileDest) + "?alt=media&token=" + photoId;        
-            analyze(url);
-        }).catch(err => {
-            console.error("Upload error", err);
-        });
-    })
-    .catch((error) => {
-        console.error("no image");
-
-        bucket.upload(filePath, {
-            gzip: true,
-            destination: fileDest,
-            metadata: metadata
-        }).then((data)=> {        
-            const url = "https://firebasestorage.googleapis.com/v0/b/" + bucket.name + "/o/" + encodeURIComponent(fileDest) + "?alt=media&token=" + photoId;        
-            analyze(url);
-        }).catch(err => {
-            console.error("Upload error", err);
-        });
-    });
-}
-
 /**
  * Method to send photo to Azure to be analyzed
  * @param url url of the photo
  */
 async function analyze(url) {
-    var data = JSON.stringify({
-        "Url": url
-    });
-    
+    var data = new FormData();
+    data.append('image file', fs.createReadStream(url));
+
     var config = {
-        method: 'post',
-        url: 'https://fruitvision.cognitiveservices.azure.com/customvision/v3.0/Prediction/a16bd1d4-1eec-495e-82d6-0edbf005757d/classify/iterations/Iteration1/url',
-        headers: { 
-            'Prediction-Key': 'ff56c613f1ae48bba40bc89bbfb3fc9a', 
-            'Content-Type': 'application/json'
-        },
-        data : data
+    method: 'post',
+    url: 'https://fruitvision.cognitiveservices.azure.com/customvision/v3.0/Prediction/a16bd1d4-1eec-495e-82d6-0edbf005757d/classify/iterations/Iteration1/image',
+    headers: { 
+        'Prediction-Key': 'ff56c613f1ae48bba40bc89bbfb3fc9a', 
+        'Content-Type': 'application/octet-stream', 
+        ...data.getHeaders()
+    },
+    data : data
     };
-    
+
     axios(config)
     .then(function (response) {
+        // console.log(JSON.stringify(response.data));
         dataToSend = response.data;
         dataToSend.deviceInfo = deviceInfo;
-        dataToSend.imageUrl = url;
+        dataToSend.imageUrl = base64_encode(url);
         sendIOTMessage(dataToSend);
     })
     .catch(function (error) {
         console.log(error);
-    });   
+    });
+}
+
+/**
+ * Function to encode image to base 64
+ * @param file file to encode
+ * @returns base64 string of image
+ */
+function base64_encode(file) {
+    // read binary data
+    var bitmap = fs.readFileSync(file);
+    // convert binary data to base64 encoded string
+    return new Buffer(bitmap).toString('base64');
 }
 
 /**
@@ -182,7 +136,7 @@ function sendIOTMessage(data) {
 function takePhoto() {
     // Call Azure image recognition
     Webcam.capture("webcam", function( err, data ) {
-        uploadPhoto('./webcam.jpg');
+        analyze('./webcam.jpg');
     });
 }
 
