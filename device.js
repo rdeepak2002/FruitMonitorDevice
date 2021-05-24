@@ -81,8 +81,8 @@ const bucket = admin.storage().bucket();
  * @param filePath the local path to the image
  */
 async function uploadPhoto(filePath) {
-    const photoId = uuid();
-    // const photoId = deviceInfo.id;
+    // const photoId = uuid();
+    const photoId = deviceInfo.id;
 
     const metadata = {
         metadata: {
