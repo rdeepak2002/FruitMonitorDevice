@@ -14,7 +14,7 @@ const fs = require('fs');
 var FormData = require('form-data');
 
 const socketIOClient = require('socket.io-client');
-const ENDPOINT = "http://localhost:5000";
+const ENDPOINT = "http://fruitvisionserver.herokuapp.com";
 
 // create webcam
 const opts = {
