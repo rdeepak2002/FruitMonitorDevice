@@ -1,4 +1,4 @@
-# FruitMonitorDevice
+# Fruit Monitor Device
 
 ## Get Started
 
