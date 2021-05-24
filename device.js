@@ -75,7 +75,7 @@ async function analyze(url) {
 
     var config = {
     method: 'post',
-    url: 'https://fruitvision.cognitiveservices.azure.com/customvision/v3.0/Prediction/a16bd1d4-1eec-495e-82d6-0edbf005757d/classify/iterations/Iteration1/image',
+    url: 'https://fruitvision.cognitiveservices.azure.com/customvision/v3.0/Prediction/a16bd1d4-1eec-495e-82d6-0edbf005757d/classify/iterations/Iteration2/image',
     headers: { 
         'Prediction-Key': 'ff56c613f1ae48bba40bc89bbfb3fc9a', 
         'Content-Type': 'application/octet-stream', 
