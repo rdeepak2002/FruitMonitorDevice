@@ -1,6 +1,10 @@
 # Fruit Monitor Device
 
-## Get Started
+## Authors
+
+Deepak Ramalingam & Aarush Umap
+
+## How to Run
 
 ```sudo apt-get install fswebcam```
 
