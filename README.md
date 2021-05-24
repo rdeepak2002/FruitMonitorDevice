@@ -6,7 +6,7 @@ Deepak Ramalingam & Aarush Umap
 
 ## About
 
-IoT device application for the Fruit Vision service. This is only compatible with Linux machines. 
+IoT device application for the FruitVision service. This is only compatible with Linux machines. 
 
 ## How to Run
 
