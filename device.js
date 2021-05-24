@@ -94,15 +94,32 @@ async function uploadPhoto(filePath) {
 
     const fileDest = `captures/${photoId}.jpg`;
 
-    bucket.upload(filePath, {
-        gzip: true,
-        destination: fileDest,
-        metadata: metadata
-    }).then((data)=> {        
-        const url = "https://firebasestorage.googleapis.com/v0/b/" + bucket.name + "/o/" + encodeURIComponent(fileDest) + "?alt=media&token=" + photoId;        
-        analyze(url);
-    }).catch(err => {
-        console.error("Upload error", err);
+    bucket.file(fileDest).delete()
+    .then(()=>{
+        bucket.upload(filePath, {
+            gzip: true,
+            destination: fileDest,
+            metadata: metadata
+        }).then((data)=> {        
+            const url = "https://firebasestorage.googleapis.com/v0/b/" + bucket.name + "/o/" + encodeURIComponent(fileDest) + "?alt=media&token=" + photoId;        
+            analyze(url);
+        }).catch(err => {
+            console.error("Upload error", err);
+        });
+    })
+    .catch((error) => {
+        console.error("no image");
+
+        bucket.upload(filePath, {
+            gzip: true,
+            destination: fileDest,
+            metadata: metadata
+        }).then((data)=> {        
+            const url = "https://firebasestorage.googleapis.com/v0/b/" + bucket.name + "/o/" + encodeURIComponent(fileDest) + "?alt=media&token=" + photoId;        
+            analyze(url);
+        }).catch(err => {
+            console.error("Upload error", err);
+        });
     });
 }
 
